@@ -1,0 +1,89 @@
+fastp:
+  cmdline: '{path:~fastp} -i {0} -I {1} -o {prefix}_1.fastq.gz -O {prefix}_2.fastq.gz {args}'
+  tags: default
+  outs:
+    read1: "{prefix}_1.fastq.gz"
+    read2: "{prefix}_2.fastq.gz"
+
+bwa_mem:
+  cmdline: '{path:~bwa} mem {args} -R "@RG\tID:{prefix}\tSM:{prefix}\tLB:{library:~lib}" {0} {1} {2} | samtools view -b -o {prefix}.bam'
+  tags: default
+  outs:
+    bamout: "{prefix}.bam"
+
+samtools_markdup:
+  cmdline: "{path:~samtools} markdup {0} {prefix}.mkdup.bam"
+  outs:
+    bamout: "{prefix}.mkdup.bam"
+
+gatk_markduplicates:
+  cmdline: gatk --java-options -Xmx{mem:~8}g MarkDuplicates
+        --INPUT {0}
+        --OUTPUT {prefix}.mkdup.bam
+        --METRICS_FILE {prefix}.mkdup.metrics
+        --TMP_DIR . 
+        ----REFERENCE_SEQUENCE {1} {args}
+  outs:
+    bamout: '{prefix}.mkdup.bam'
+    metrics: '{prefix}.mkdup.metrics'
+
+gatk_baserecalibrator:
+  cmdline: gatk --java-options -Xmx{mem:~8}g BaseRecalibrator 
+        --input {0}
+        --output {prefix}.bqsr.table
+        --reference {1}
+        --tmp-dir . {args}
+  outs:
+    bqsr_table: '{prefix}.bqsr.table'
+
+gatk_applybqsr: 
+  cmdline: gatk --java-options "-Xmx{mem:~8}g" ApplyBQSR --input {0}
+        --output {prefix}.bqsr.bam
+        --reference {2}
+        --bqsr-recal-file {1}
+        --tmp-dir . {args}
+  outs: 
+    bamout: '{prefix}.bqsr.bam'
+
+gatk_bedtointervallist:
+  cmdline: gatk --java-options "-Xmx{mem:~4}g" BedToIntervalList
+        --INPUT {0}
+        --SEQUENCE_DICTIONARY {1}
+        --OUTPUT {region:~region}.interval_list {args}
+  outs:
+    interval_list: '{region:~region}.interval_list'
+
+gatk_collecthsmetrics:
+  cmdline: gatk --java-options "-Xmx{mem:~4}g" CollectHsMetrics 
+        --INPUT {0}
+        --BAIT_INTERVALS {1}
+        --TARGET_INTERVALS {2}
+        --OUTPUT {prefix}.hs.metrics {args}
+  outs:
+    hs_metrics: '{prefix}.hs.metrics'
+
+gatk_collectinsertsizemetrics:
+  cmdline: gatk --java-options "-Xmx{mem:~4}g" CollectInsertSizeMetrics 
+        --INPUT {0}
+        --OUTPUT {prefix}.is.metrics
+        --Histogram_FILE {prefix}.is.pdf {args}
+  outs:
+    is_metrics: '{prefix}.is.metrics'
+    is_hist: '{prefix}.is.pdf'
+
+gatk_estimatelibrarycomplexity:
+  cmdline: gatk --java-options "-Xmx{mem:~4}g" EstimateLibraryComplexity
+        --INPUT {0}
+        --OUTPUT {prefix}.lc.metics
+  outs:
+    lc_metircs: '{prefix}.lc.metics'
+
+
+bamdst:
+  cmdline: bamdst {args} -o . -p {0} {1}
+  outs:
+    coverage: coverage.report
+    chromosome: chromosome.report
+    depth: depth.tsv.gz
+    uncover: uncover.bed
+    region: region.tsv.gz

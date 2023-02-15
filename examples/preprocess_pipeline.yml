@@ -1,0 +1,22 @@
+# 测试PreProcess流程模块的默认配置文件
+reference: /home/qingyun039/Public/NGS/resource/gatk-bundle-b37/human_g1k_v37_decoy.fasta
+bedfile: /home/qingyun039/Public/NGS/rawdata/MGI_Exome_Capture_V5_b37.bed
+
+fastp_args:
+  '-w': 16
+  '--adapter_sequence': AAGTCGGAGGCCAAGCGGTCTTAGGAAGACAA
+  '--adapter_sequence_r2': AAGTCGGATCGTAGCCATGTCGTTCTGTGAGCCAAGGAGTTG
+  resource:
+    cpus: 8
+    mems: 8G
+    outdir: fastp
+
+bwa_args:
+  '-t': 16
+  '-K': 1000000
+  '-M': Null
+  '-Y': Null
+  resource: 
+    cpus: 16
+    mems: 16G
+    outdir: align
